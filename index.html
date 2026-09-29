@@ -139,6 +139,10 @@ details summary{cursor:pointer;font-weight:700}
 .guide dt{font-weight:700;margin-top:10px}
 .guide dd{margin:2px 0 0;color:var(--muted)}
 .guide kbd{font-family:inherit;font-weight:700;border:1.5px solid var(--line);border-radius:6px;padding:0 6px;background:var(--bg)}
+.bgmctl{display:inline-flex;align-items:center;gap:8px;flex:none}
+.bgmctl input[type=range]{width:96px;padding:0;min-height:32px;border:none;background:none;accent-color:var(--brass)}
+button.bgm{min-width:40px}
+button.bgm.on{background:var(--brass);color:#231a08;border-color:var(--brass)}
 .banner{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--danger);color:#fff;
   border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:14px}
 </style>
@@ -487,6 +491,117 @@ function copyText(t,label){
 function inviteURL(){if(!/^https?:/.test(location.protocol))return null;return location.origin+location.pathname+'?join='+code;}
 window.addEventListener('beforeunload',e=>{if(role==='host'&&Object.keys(conns).length){e.preventDefault();e.returnValue='';}});
 
+/* ===== BGM(Web Audioでその場で生成するラウンジジャズ) ===== */
+const BGM=(()=>{
+  let ctx=null,master=null,dry=null,send=null,noise=null,timer=null,stopT=null,step=0,t0=0,on=false,lastMel=3;
+  let vol=Math.min(1,Math.max(0,+(ls.get('pk_bgm_vol')||0.5)));
+  const BEAT=60/84;
+  const mtof=m=>440*Math.pow(2,(m-69)/12);
+  const CH=[
+    {b:41,t:4,v:[53,57,60,64]}, {b:38,t:3,v:[53,57,60,62]},
+    {b:43,t:3,v:[53,58,62,65]}, {b:36,t:4,v:[52,55,58,62]},
+    {b:45,t:3,v:[55,60,64,67]}, {b:38,t:4,v:[54,57,60,64]},
+    {b:43,t:3,v:[53,58,62,65]}, {b:36,t:4,v:[52,55,58,62]}];
+  const MEL=[65,67,69,72,74,76,77,79,81];
+  function init(){
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+    ctx=new AC();
+    master=ctx.createGain();master.gain.value=0;
+    const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);
+    dry=ctx.createGain();dry.connect(master);
+    const rev=ctx.createConvolver();const len=Math.floor(ctx.sampleRate*2.2);
+    const ir=ctx.createBuffer(2,len,ctx.sampleRate);
+    for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}
+    rev.buffer=ir;send=ctx.createGain();send.gain.value=0.3;send.connect(rev);rev.connect(master);
+    noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
+    const nd=noise.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    return true;
+  }
+  function out(node,wet){node.connect(dry);if(wet){const g=ctx.createGain();g.gain.value=wet;node.connect(g);g.connect(send);}}
+  function env(g,t,peak,att,dec){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+att);g.gain.exponentialRampToValueAtTime(0.0001,t+att+dec);}
+  function epiano(m,t,vel){
+    const g=ctx.createGain(),lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2200;
+    [[1,'sine',1],[2,'sine',.18],[1.003,'triangle',.25]].forEach(([mul,type,amt])=>{
+      const o=ctx.createOscillator(),og=ctx.createGain();o.type=type;o.frequency.value=mtof(m)*mul;og.gain.value=amt;
+      o.connect(og);og.connect(g);o.start(t);o.stop(t+1.8);});
+    env(g,t,0.05*vel,0.01,1.6);g.connect(lp);out(lp,0.8);
+  }
+  function bass(m,t){
+    const o=ctx.createOscillator(),o2=ctx.createOscillator(),g=ctx.createGain(),lp=ctx.createBiquadFilter();
+    o.type='triangle';o2.type='sine';o.frequency.value=o2.frequency.value=mtof(m);
+    lp.type='lowpass';lp.frequency.value=700;
+    o.connect(lp);o2.connect(lp);lp.connect(g);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.2,t+0.015);
+    g.gain.exponentialRampToValueAtTime(0.09,t+0.25);g.gain.exponentialRampToValueAtTime(0.0001,t+BEAT*0.95);
+    out(g,0.15);o.start(t);o2.start(t);o.stop(t+BEAT);o2.stop(t+BEAT);
+  }
+  function vibe(m,t){
+    const o=ctx.createOscillator(),g=ctx.createGain(),trem=ctx.createGain(),lfo=ctx.createOscillator(),depth=ctx.createGain();
+    o.type='sine';o.frequency.value=mtof(m);lfo.frequency.value=5;depth.gain.value=0.35;trem.gain.value=1;
+    lfo.connect(depth);depth.connect(trem.gain);o.connect(trem);trem.connect(g);
+    env(g,t,0.045,0.005,1.4);out(g,1.2);o.start(t);lfo.start(t);o.stop(t+1.5);lfo.stop(t+1.5);
+  }
+  function hiss(t,freq,peak,dec){
+    const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+    s.buffer=noise;f.type='highpass';f.frequency.value=freq;s.connect(f);f.connect(g);
+    env(g,t,peak,0.003,dec);out(g,0.3);s.start(t,Math.random()*0.5);s.stop(t+dec+0.05);
+  }
+  const stepTime=n=>t0+Math.floor(n/2)*BEAT+(n%2?BEAT*2/3:0);
+  function playStep(n,t){
+    const bar=Math.floor(n/8)%8,pos=n%8,c=CH[bar],nx=CH[(bar+1)%8];
+    if(pos%2===0){
+      const beat=pos/2;
+      let m=[c.b,c.b+c.t,c.b+7,nx.b+(Math.random()<.5?1:-1)][beat];
+      while(m>52)m-=12;while(m<33)m+=12;
+      bass(m,t);
+      hiss(t,7000,beat%2?0.035:0.022,0.28);
+      if(beat%2)hiss(t,9000,0.02,0.05);
+    } else if(pos===3||pos===7)hiss(t,7000,0.016,0.18);
+    if((pos===0&&Math.random()<.55)||(pos===3&&Math.random()<.85)||(pos===5&&Math.random()<.15))
+      c.v.forEach((m,i)=>epiano(m,t+i*0.008,pos===3?1:0.8));
+    if(Math.random()<(bar%4===3?0.12:0.3)){
+      lastMel=Math.max(0,Math.min(MEL.length-1,lastMel+[-2,-1,-1,1,1,2][Math.floor(Math.random()*6)]));
+      vibe(MEL[lastMel],t);
+    }
+  }
+  function tick(){
+    if(!on)return;
+    let t=stepTime(step);
+    while(t<ctx.currentTime+0.25){playStep(step,t);step++;t=stepTime(step);}
+  }
+  function start(){
+    if(!ctx&&!init())return false;
+    clearTimeout(stopT);ctx.resume();
+    if(!on){on=true;step=0;t0=ctx.currentTime+0.12;clearInterval(timer);timer=setInterval(tick,25);}
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(vol*0.9,ctx.currentTime,0.3);
+    return true;
+  }
+  function stop(){
+    if(!ctx||!on)return;on=false;
+    master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(0,ctx.currentTime,0.15);
+    stopT=setTimeout(()=>{clearInterval(timer);timer=null;if(!on)ctx.suspend();},700);
+  }
+  return {
+    get on(){return on;}, get vol(){return vol;},
+    toggle(){if(on){stop();ls.set('pk_bgm','0');}else if(start())ls.set('pk_bgm','1');else toast('このブラウザでは音楽を再生できません');},
+    setVol(v){vol=Math.min(1,Math.max(0,+v));ls.set('pk_bgm_vol',vol);if(on)master.gain.setTargetAtTime(vol*0.9,ctx.currentTime,0.1);},
+    resume(){if(on&&ctx&&ctx.state!=='running')ctx.resume();},
+    autoStart(){if(ls.get('pk_bgm')==='1'&&!on)start();}
+  };
+})();
+document.addEventListener('pointerdown',function first(e){
+  if(e.target.closest&&e.target.closest('[data-bgm]'))return;
+  document.removeEventListener('pointerdown',first);
+  if(BGM.autoStart())render();else render();
+});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)BGM.resume();});
+function bgmCtl(full){
+  const on=BGM.on;
+  return `<span class="bgmctl">${full&&on?`<input type="range" min="0" max="1" step="0.05" value="${BGM.vol}" aria-label="BGMの音量" oninput="BGM.setVol(this.value)">`:''}
+    <button class="ghost small bgm ${on?'on':''}" data-bgm aria-pressed="${on}" aria-label="BGM ${on?'オン':'オフ'}" title="BGM" onclick="BGM.toggle();render()">♪${full?(on?' BGM オン':' BGM オフ'):''}</button></span>`;
+}
+
 /* ===== 描画 ===== */
 function cardHTML(c,size,anim){
   if(c==='back'||c==='?')return `<div class="card back ${size}"></div>`;
@@ -512,7 +627,7 @@ function cfgHTML(){
 function homeHTML(){
   const last=ls.get('pk_last');const busy=connState==='connecting';
   const fan=['As','Ks','Qh','Jd','Ts'].map((c,i)=>`<div style="transform:rotate(${(i-2)*7}deg) translateY(${Math.abs(i-2)*4}px);margin-left:${i?-18:0}px">${cardHTML(c,'lg')}</div>`).join('');
-  return `<div class="hero"><div class="fan" aria-hidden="true">${fan}</div>
+  return `<div class="topbar" style="justify-content:flex-end;margin-bottom:0">${bgmCtl(true)}</div><div class="hero"><div class="fan" aria-hidden="true">${fan}</div>
     <h1>ホールデム・テーブル</h1>
     <p>2〜8人で遊べるテキサスホールデム。アカウント登録なしで、コードを共有すればそれぞれの端末から参加できます。</p></div>
   <section class="panel guide" aria-labelledby="gh">
@@ -579,7 +694,7 @@ function homeHTML(){
   </details>`;
 }
 function localSetupHTML(){
-  return `<div class="topbar"><button class="ghost small" onclick="view='home';render()">戻る</button></div>
+  return `<div class="topbar"><button class="ghost small" onclick="view='home';render()">戻る</button>${bgmCtl()}</div>
   <div class="panel stack-gap"><h2 style="margin:0;font-size:22px">参加メンバー</h2>
     ${localNames.map((n,i)=>`<div class="row"><input maxlength="12" value="${esc(n)}" placeholder="プレイヤー${i+1}" aria-label="プレイヤー${i+1}の名前" oninput="localNames[${i}]=this.value">
       ${localNames.length>2?`<button class="ghost small" style="flex:0 0 auto" onclick="localNames.splice(${i},1);render()">削除</button>`:''}</div>`).join('')}
@@ -595,7 +710,7 @@ function lostBanner(){
 function onlineTag(p){return role!=='local'&&p.online===false?'<span class="tag off">オフライン</span>':'';}
 function lobbyHTML(){
   const host=role==='host';const url=inviteURL();
-  return `<div class="topbar"><button class="ghost small" onclick="${host?'goHome()':'leaveSeat()'}">${host?'テーブルを閉じる':'席を外す'}</button></div>
+  return `<div class="topbar"><button class="ghost small" onclick="${host?'goHome()':'leaveSeat()'}">${host?'テーブルを閉じる':'席を外す'}</button>${bgmCtl()}</div>
   ${lostBanner()}
   <div class="panel" style="text-align:center">
     <p class="muted" style="margin:0">友だちにこのコードを伝えてください</p>
@@ -657,7 +772,7 @@ function tableHTML(){
     :`<button class="ghost small" onclick="leaveSeat()">席を外す</button>`;
   return `<div class="topbar">
     <span class="code">${role==='local'?'第'+S.handNo+'ハンド':esc(S.code)}</span>
-    <span class="row" style="flex:0 0 auto">${role!=='local'?`<span class="muted">第${S.handNo}ハンド</span>`:''}${exitBtn}</span></div>
+    <span class="row" style="flex:0 0 auto">${role!=='local'?`<span class="muted">第${S.handNo}ハンド</span>`:''}${bgmCtl()}${exitBtn}</span></div>
   ${lostBanner()}
   <div class="seats">${seats}</div>
   <div class="felt"><div class="street">${street}</div><div class="board">${board}</div>
