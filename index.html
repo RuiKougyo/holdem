@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ホールデム・テーブル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E7E1D3; --ink:#1F2623; --muted:#5E6762; --panel:#F6F2E8; --line:#CEC4AF;
+  --felt:#0F4843; --felt-deep:#0A302C; --rail:#4B2F1F; --brass:#C9A24A; --brass-deep:#9C7A2E;
+  --ivory:#FBF8F1; --red:#BF3528; --blk:#1A1F1D; --danger:#A8322A; --gold-text:#8A6A22;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#121614; --ink:#ECE5D5; --muted:#9BA49F; --panel:#1C2220; --line:#343C38; --gold-text:#C9A24A; }
+}
+:root[data-theme="dark"]{ --bg:#121614; --ink:#ECE5D5; --muted:#9BA49F; --panel:#1C2220; --line:#343C38; --gold-text:#C9A24A; }
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Zen Kaku Gothic New",system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+h1,h2,.mincho{font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif}
+button{font:inherit;cursor:pointer;border:none;border-radius:10px;padding:12px 16px;font-weight:700;
+  background:var(--ink);color:var(--bg);min-height:44px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button.brass{background:var(--brass);color:#231a08}
+button.small{padding:6px 12px;min-height:34px;font-size:14px}
+input,select{font:inherit;padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--panel);color:var(--ink);width:100%;min-height:44px}
+label{font-size:14px;color:var(--muted);display:block;margin-bottom:4px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.muted{color:var(--muted);font-size:14px}
+.stack-gap>*+*{margin-top:12px}
+
+.hero{padding:28px 0 18px}
+.hero h1{font-size:40px;line-height:1.15;margin:0 0 6px;font-weight:800;letter-spacing:.02em}
+.hero p{margin:0;color:var(--muted)}
+.fan{display:flex;margin:18px 0 4px;height:96px;padding-left:6px}
+details summary{cursor:pointer;font-weight:700}
+.ranks{margin:8px 0 0;padding-left:1.4em;font-size:14px}
+
+.card{background:var(--ivory);color:var(--blk);border-radius:6px;display:inline-flex;flex-direction:column;
+  align-items:center;justify-content:center;font-family:"Shippori Mincho B1",serif;font-weight:800;
+  box-shadow:0 1px 0 rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.25);flex:none;line-height:1}
+.card.red{color:var(--red)}
+.card .s{margin-top:.1em}
+.card.xs{width:26px;height:36px;font-size:13px;border-radius:4px}
+.card.sm{width:34px;height:48px;font-size:16px}
+.card.md{width:48px;height:68px;font-size:22px}
+.card.lg{width:64px;height:90px;font-size:28px}
+.card.back{background:repeating-linear-gradient(45deg,var(--brass-deep) 0 4px,var(--brass) 4px 8px);border:2px solid var(--ivory)}
+.card.slot{background:transparent;box-shadow:none;border:1.5px dashed rgba(251,248,241,.25)}
+.cards{display:flex;gap:4px}
+
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.topbar .code{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:20px;letter-spacing:.12em}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.seat{background:var(--panel);border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+.seat.turn{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 35%,transparent)}
+.seat.folded{opacity:.5}
+.seat.out{opacity:.35}
+.seat .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.seat .top{display:flex;align-items:center;gap:6px;min-width:0}
+.seat .meta{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:6px}
+.seat .cards{min-height:36px;margin-top:6px}
+.dbtn{flex:none;width:20px;height:20px;border-radius:50%;background:var(--ivory);color:var(--blk);
+  font-size:11px;font-weight:800;display:inline-grid;place-items:center;border:1.5px solid var(--blk);vertical-align:middle}
+.chip{display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
+.chip::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--brass);
+  border:2px dotted var(--ivory);box-shadow:0 0 0 1px var(--brass-deep)}
+.status{font-size:13px;color:var(--muted);min-height:1.4em}
+.status.win{color:var(--gold-text);font-weight:700}
+
+.felt{border-radius:999px;padding:26px 18px;margin:4px 0 14px;
+  background:radial-gradient(ellipse at 50% 40%,var(--felt) 0%,var(--felt-deep) 100%);
+  border:10px solid var(--rail);
+  box-shadow:inset 0 0 0 2px var(--brass-deep),inset 0 8px 30px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.2);
+  color:var(--ivory);text-align:center}
+.felt .board{display:flex;gap:6px;justify-content:center}
+.felt .pot{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:30px;line-height:1.1;margin-top:10px;
+  font-variant-numeric:tabular-nums;color:var(--brass)}
+.felt .pot small{display:block;font-family:"Zen Kaku Gothic New",sans-serif;font-weight:500;font-size:12px;color:rgba(251,248,241,.7)}
+.felt .street{font-size:13px;color:rgba(251,248,241,.75);margin-bottom:10px}
+@media (max-width:380px){.felt{padding:22px 8px}.card.md{width:42px;height:60px;font-size:19px}}
+
+.me{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.me.turn{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 30%,transparent)}
+.me .head{display:flex;gap:14px;align-items:center}
+.me .info{flex:1;min-width:0}
+.me .nm{font-weight:700;font-size:18px}
+.handname{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:18px;color:var(--gold-text)}
+.actions{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions .fold{background:transparent;color:var(--danger);border:1.5px solid var(--danger)}
+.raisebox{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:12px;margin-top:4px}
+.raisebox input[type=range]{padding:0;min-height:32px;border:none;background:none;accent-color:var(--brass)}
+.presets{display:flex;gap:6px;margin:6px 0 10px}
+.presets button{flex:1;padding:6px 4px}
+.raiseval{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.results .line{padding:6px 0;border-bottom:1px dashed var(--line)}
+.results .line:last-of-type{border-bottom:none}
+.log{font-size:13px;color:var(--muted);margin-top:14px;max-height:140px;overflow:auto;border-left:3px solid var(--line);padding-left:10px}
+.waiting{margin:10px 0 0;font-size:14px;color:var(--muted)}
+
+.cover{position:fixed;inset:0;background:var(--felt-deep);color:var(--ivory);display:grid;place-items:center;
+  text-align:center;padding:24px;z-index:20;
+  padding-top:calc(24px + env(safe-area-inset-top,0px));padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.cover h2{font-size:30px;margin:0 0 8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  background:var(--danger);color:#fff;padding:10px 16px;border-radius:10px;z-index:30;max-width:92vw;font-size:14px}
+.bigcode{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:48px;letter-spacing:.2em;line-height:1.2}
+.plist{list-style:none;padding:0;margin:8px 0 0}
+.plist li{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.plist li:last-child{border-bottom:none}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--muted)}
+@media (prefers-reduced-motion: no-preference){
+  .deal{animation:deal .35s ease-out both}
+  @keyframes deal{from{transform:translateY(-8px) rotate(-4deg);opacity:0}to{transform:none;opacity:1}}
+}
+.tag.off{color:var(--danger);border-color:var(--danger);margin-left:4px;flex:none}
+.guide h2{margin:0 0 4px;font-size:22px}
+.guide h3{font-size:17px;margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+.guide .role{font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;background:var(--brass);color:#231a08}
+.guide .role.g{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.guide ol{margin:0;padding-left:1.5em}
+.guide ol li{margin:6px 0}
+.guide .note{background:color-mix(in srgb,var(--brass) 14%,transparent);border-left:4px solid var(--brass);
+  border-radius:0 10px 10px 0;padding:10px 12px;margin-top:12px;font-size:14px}
+.guide dl{margin:0;font-size:14px}
+.guide dt{font-weight:700;margin-top:10px}
+.guide dd{margin:2px 0 0;color:var(--muted)}
+.guide kbd{font-family:inherit;font-weight:700;border:1.5px solid var(--line);border-radius:6px;padding:0 6px;background:var(--bg)}
+.banner{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--danger);color:#fff;
+  border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:14px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" onerror="void 0"></script>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="overlay"></div>
+<script>
+const RV={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'J':11,'Q':12,'K':13,'A':14};
+const SUITS={s:'♠',h:'♥',d:'♦',c:'♣'};
+const HAND_NAMES=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート','フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
+const STREETS={preflop:'プリフロップ',flop:'フロップ',turn:'ターン',river:'リバー',showdown:'ショーダウン'};
+function rnd(n){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n;}
+function rid(n,abc){abc=abc||'abcdefghijkmnpqrstuvwxyz23456789';let s='';for(let i=0;i<n;i++)s+=abc[rnd(abc.length)];return s;}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function newDeck(){const d=[];for(const r of '23456789TJQKA')for(const s of 'shdc')d.push(r+s);
+  for(let i=d.length-1;i>0;i--){const j=rnd(i+1);[d[i],d[j]]=[d[j],d[i]];}return d;}
+function cardText(c){return (c[0]==='T'?'10':c[0])+SUITS[c[1]];}
+
+/* ===== 役判定 ===== */
+function score5(cs){
+  const v=cs.map(c=>RV[c[0]]).sort((a,b)=>b-a);
+  const fl=cs.every(c=>c[1]===cs[0][1]);
+  const cnt={};v.forEach(x=>cnt[x]=(cnt[x]||0)+1);
+  const g=Object.entries(cnt).map(([k,n])=>[n,+k]).sort((a,b)=>b[0]-a[0]||b[1]-a[1]);
+  const u=[...new Set(v)];let st=0;
+  if(u.length===5){if(u[0]-u[4]===4)st=u[0];else if(u.join()==='14,5,4,3,2')st=5;}
+  if(st&&fl)return[8,st];
+  if(g[0][0]===4)return[7,g[0][1],g[1][1]];
+  if(g[0][0]===3&&g[1][0]===2)return[6,g[0][1],g[1][1]];
+  if(fl)return[5,...v];
+  if(st)return[4,st];
+  if(g[0][0]===3)return[3,...g.map(x=>x[1])];
+  if(g[0][0]===2&&g[1][0]===2)return[2,...g.map(x=>x[1])];
+  if(g[0][0]===2)return[1,...g.map(x=>x[1])];
+  return[0,...v];
+}
+function cmp(a,b){for(let i=0;i<Math.max(a.length,b.length);i++){const d=(a[i]||0)-(b[i]||0);if(d)return d;}return 0;}
+function bestHand(cs){
+  const n=cs.length;if(n<5)return null;let best=null;
+  for(let a=0;a<n;a++)for(let b=a+1;b<n;b++)for(let c=b+1;c<n;c++)for(let d=c+1;d<n;d++)for(let e=d+1;e<n;e++){
+    const five=[cs[a],cs[b],cs[c],cs[d],cs[e]];const s=score5(five);
+    if(!best||cmp(s,best.score)>0)best={score:s,cards:five};
+  }
+  best.name=HAND_NAMES[best.score[0]];return best;
+}
+
+/* ===== ゲーム進行 ===== */
+function freshTable(code,hostId,cfg){
+  return {code,hostId,phase:'lobby',players:[],board:[],deck:[],dealer:-1,turn:-1,
+    currentBet:0,minRaise:cfg.bb,sb:cfg.sb,bb:cfg.bb,start:cfg.start,handNo:0,log:[],results:null,v:0};
+}
+function addPlayer(s,id,name){
+  const ex=s.players.find(p=>p.id===id);
+  if(ex){ex.name=name;return;}
+  if(s.players.length>=8)throw new Error('満席です(最大8人)');
+  s.players.push({id,name,stack:s.start,bet:0,total:0,folded:true,allIn:false,out:true,hole:[],acted:false,last:''});
+}
+const inHand=p=>!p.out&&!p.folded;
+const canAct=p=>!p.out&&!p.folded&&!p.allIn;
+function nextIdx(s,i,pred){const n=s.players.length;for(let k=1;k<=n;k++){const j=((i+k)%n+n)%n;if(pred(s.players[j]))return j;}return -1;}
+function pay(p,x){x=Math.max(0,Math.min(x,p.stack));p.stack-=x;p.bet+=x;p.total+=x;if(p.stack===0)p.allIn=true;}
+function log(s,t){s.log.push(t);if(s.log.length>40)s.log.shift();}
+function potTotal(s){return s.players.reduce((a,p)=>a+p.total,0);}
+
+function startHand(s){
+  if(s.players.filter(p=>p.stack>0).length<2)throw new Error('チップを持っているプレイヤーが2人以上必要です');
+  s.handNo++;s.board=[];s.deck=newDeck();s.results=null;s.log=[];
+  s.players.forEach(p=>{p.out=p.stack<=0;p.folded=p.out;p.allIn=false;p.bet=0;p.total=0;p.hole=[];p.acted=false;p.last='';});
+  s.dealer=nextIdx(s,s.dealer,p=>!p.out);
+  const active=s.players.filter(p=>!p.out).length;
+  const sbI=active===2?s.dealer:nextIdx(s,s.dealer,p=>!p.out);
+  const bbI=nextIdx(s,sbI,p=>!p.out);
+  const sbP=s.players[sbI],bbP=s.players[bbI];
+  pay(sbP,s.sb);sbP.last='SB '+sbP.bet;
+  pay(bbP,s.bb);bbP.last='BB '+bbP.bet;
+  s.players.forEach(p=>{if(!p.out)p.hole=[s.deck.pop(),s.deck.pop()];});
+  s.currentBet=s.bb;s.minRaise=s.bb;s.phase='preflop';
+  log(s,`第${s.handNo}ハンド開始(ディーラー: ${s.players[s.dealer].name})`);
+  s.turn=nextIdx(s,bbI,canAct);
+  if(s.turn<0||roundDone(s))advance(s);
+}
+function roundDone(s){
+  const a=s.players.filter(canAct);
+  if(a.length===0)return true;
+  if(a.length===1&&a[0].bet>=s.currentBet)return true;
+  return a.every(p=>p.acted&&p.bet===s.currentBet);
+}
+function act(s,pid,type,amt){
+  const p=s.players[s.turn];
+  if(!p||p.id!==pid||s.phase==='lobby'||s.phase==='showdown')throw new Error('今はあなたの番ではありません');
+  const toCall=s.currentBet-p.bet;
+  if(type==='fold'){p.folded=true;p.last='フォールド';}
+  else if(type==='check'){if(toCall>0)throw new Error('チェックできません');p.last='チェック';}
+  else if(type==='call'){pay(p,toCall);p.last=p.allIn?'オールイン':'コール';}
+  else if(type==='raise'){
+    const max=p.bet+p.stack;amt=Math.min(Math.floor(Number(amt)||0),max);
+    const minTo=s.currentBet+s.minRaise;
+    if(amt<=s.currentBet)throw new Error('レイズ額が小さすぎます');
+    if(amt<minTo&&amt<max)throw new Error(`${minTo}以上にしてください`);
+    const inc=amt-s.currentBet;if(inc>=s.minRaise)s.minRaise=inc;
+    const wasBet=s.currentBet===0;
+    pay(p,amt-p.bet);s.currentBet=amt;
+    s.players.forEach(q=>{if(q!==p&&canAct(q))q.acted=false;});
+    p.last=p.allIn?`オールイン ${amt}`:(wasBet?`ベット ${amt}`:`レイズ ${amt}`);
+  } else throw new Error('不明な操作です');
+  p.acted=true;
+  log(s,`${p.name}: ${p.last}`);
+  proceed(s);
+}
+function proceed(s){
+  const live=s.players.filter(inHand);
+  if(live.length===1){finishUncontested(s,live[0]);return;}
+  if(roundDone(s)){advance(s);return;}
+  s.turn=nextIdx(s,s.turn,p=>canAct(p)&&(!p.acted||p.bet<s.currentBet));
+}
+function advance(s){
+  const order={preflop:'flop',flop:'turn',turn:'river',river:'showdown'};
+  while(true){
+    s.players.forEach(p=>{p.bet=0;p.acted=false;if(!p.out)p.last=p.folded?'フォールド':(p.allIn?'オールイン':'');});
+    s.currentBet=0;s.minRaise=s.bb;
+    const nx=order[s.phase];
+    if(nx==='showdown'){showdown(s);return;}
+    s.phase=nx;s.deck.pop();
+    if(nx==='flop')s.board.push(s.deck.pop(),s.deck.pop(),s.deck.pop());else s.board.push(s.deck.pop());
+    log(s,`${STREETS[nx]}: ${s.board.map(cardText).join(' ')}`);
+    if(s.players.filter(canAct).length>=2){s.turn=nextIdx(s,s.dealer,canAct);return;}
+  }
+}
+function seatDist(s,i){const n=s.players.length;return ((i-s.dealer)%n+n)%n||n;}
+function finishUncontested(s,w){
+  const pot=potTotal(s);w.stack+=pot;
+  s.phase='showdown';s.turn=-1;
+  s.results={shown:false,winners:[{id:w.id,amount:pot}],hands:{}};
+  log(s,`${w.name} が ${pot} を獲得`);
+}
+function showdown(s){
+  s.phase='showdown';s.turn=-1;
+  const live=s.players.filter(inHand);
+  const ev={};live.forEach(p=>ev[p.id]=bestHand([...p.hole,...s.board]));
+  const levels=[...new Set(s.players.filter(p=>p.total>0).map(p=>p.total))].sort((a,b)=>a-b);
+  const won={};let prev=0,carry=0;
+  const giveTo=(ws,amt)=>{
+    ws.sort((a,b)=>seatDist(s,s.players.indexOf(a))-seatDist(s,s.players.indexOf(b)));
+    const share=Math.floor(amt/ws.length);let rem=amt-share*ws.length;
+    ws.forEach(p=>{won[p.id]=(won[p.id]||0)+share+(rem>0?1:0);rem--;});
+  };
+  const winnersOf=el=>{let best=null,ws=[];el.forEach(p=>{const sc=ev[p.id].score;const c=best?cmp(sc,best):1;
+    if(c>0){best=sc;ws=[p];}else if(c===0)ws.push(p);});return ws;};
+  for(const L of levels){
+    let amt=carry;carry=0;
+    s.players.forEach(p=>{amt+=Math.max(0,Math.min(p.total,L)-prev);});
+    const el=live.filter(p=>p.total>=L);
+    prev=L;
+    if(!el.length){carry=amt;continue;}
+    giveTo(winnersOf(el),amt);
+  }
+  if(carry>0)giveTo(winnersOf(live),carry);
+  const winners=[];
+  for(const p of s.players){if(won[p.id]){p.stack+=won[p.id];winners.push({id:p.id,amount:won[p.id]});
+    log(s,`${p.name} が ${won[p.id]} を獲得(${ev[p.id].name})`);}}
+  const hands={};live.forEach(p=>hands[p.id]={name:ev[p.id].name,cards:ev[p.id].cards});
+  s.results={shown:true,winners,hands};
+}
+function removePlayer(s,id){
+  const i=s.players.findIndex(p=>p.id===id);if(i<0)return;
+  s.players.splice(i,1);
+  if(i<=s.dealer)s.dealer--;
+  if(s.hostId===id&&s.players.length)s.hostId=s.players[0].id;
+}
+
+/* ===== 通信・アプリ状態(P2P:ホストの端末がゲームを進行) ===== */
+const PREFIX='hdm-holdem-v1-';
+const CODE_ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ss={get(k){try{return sessionStorage.getItem(k)}catch(e){return null}},set(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}};
+let myId=ss.get('pk_pid')||rid(12);ss.set('pk_pid',myId);
+let view='home',role=null,S=null,code=null,peer=null,hostConn=null,conns={},connState='',pending=false;
+let myName=ls.get('pk_name')||'',joinCode='',localNames=['',''],localReveal=false,raiseVal=0,raiseKey='';
+let cfg={start:1000,blind:'10/20'};
+try{const q=new URLSearchParams(location.search).get('join');if(q)joinCode=q.toUpperCase().slice(0,5);}catch(e){}
+
+function toast(msg){const o=document.createElement('div');o.className='toast';o.setAttribute('role','alert');o.textContent=msg;document.body.appendChild(o);setTimeout(()=>o.remove(),4000);}
+function loadPeer(){
+  if(window.Peer)return Promise.resolve();
+  return new Promise((res,rej)=>{const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+    s.onload=()=>window.Peer?res():rej(new Error('通信ライブラリを読み込めませんでした'));
+    s.onerror=()=>rej(new Error('通信ライブラリを読み込めませんでした。ネット接続を確認してください'));
+    document.head.appendChild(s);});
+}
+function peerErr(e){
+  const t=e&&e.type;
+  if(t==='peer-unavailable')return 'テーブルが見つかりません。コードが正しいか、ホストが画面を開いたままか確認してください';
+  if(t==='network'||t==='server-error'||t==='socket-error'||t==='socket-closed')return '接続サーバーにつながりません。ネット接続を確認して、もう一度試してください';
+  if(t==='browser-incompatible')return 'このブラウザは対戦機能に対応していません。ChromeかSafariの最新版を使ってください';
+  return (e&&e.message)||'接続エラーが発生しました';
+}
+function needName(){const n=myName.trim();if(!n){toast('名前を入力してください');return null;}ls.set('pk_name',n);return n.slice(0,12);}
+function blinds(){const [sb,bb]=cfg.blind.split('/').map(Number);return {sb,bb,start:+cfg.start};}
+function closePeer(){const hc=hostConn,p=peer;hostConn=null;peer=null;conns={};try{hc&&hc.close()}catch(e){}try{p&&p.destroy()}catch(e){}}
+
+/* --- ホスト --- */
+async function createTable(){
+  const n=needName();if(!n||connState==='connecting')return;
+  try{await loadPeer();}catch(e){toast(e.message);return;}
+  closePeer();connState='connecting';render();
+  const tryOpen=attempt=>{
+    const c=rid(5,CODE_ABC);const p=new Peer(PREFIX+c);peer=p;
+    p.on('open',()=>{
+      if(role==='host')return;
+      code=c;S=freshTable(c,myId,blinds());addPlayer(S,myId,n);S.players[0].online=true;
+      role='host';view='game';connState='ok';render();
+    });
+    p.on('connection',conn=>setupHostConn(conn));
+    p.on('disconnected',()=>{if(peer===p){try{p.reconnect()}catch(e){}}});
+    p.on('error',e=>{
+      if(e.type==='unavailable-id'&&attempt<3&&role!=='host'){p.destroy();tryOpen(attempt+1);return;}
+      if(role!=='host'){connState='';closePeer();render();}
+      toast(peerErr(e));
+    });
+  };
+  tryOpen(0);
+}
+function setupHostConn(c){
+  c.on('data',d=>hostHandle(c,d));
+  c.on('close',()=>dropConn(c));
+  c.on('error',()=>dropConn(c));
+}
+function dropConn(c){
+  const pid=c._pid;
+  if(!S||!pid||conns[pid]!==c)return;
+  delete conns[pid];
+  const p=S.players.find(x=>x.id===pid);
+  if(p){p.online=false;log(S,`${p.name}さんの接続が切れました`);}
+  broadcast();
+}
+function hostHandle(c,d){
+  if(!S||!d||typeof d!=='object')return;
+  try{
+    if(d.t==='join'){
+      const pid=String(d.pid||'').slice(0,40);if(!pid)return;
+      const name=String(d.name||'').trim().slice(0,12)||'ゲスト';
+      addPlayer(S,pid,name);
+      const old=conns[pid];c._pid=pid;conns[pid]=c;
+      if(old&&old!==c){try{old.close()}catch(e){}}
+      S.players.find(x=>x.id===pid).online=true;
+    } else {
+      if(!c._pid||conns[c._pid]!==c)return;
+      applyMsg(c._pid,d);
+    }
+    broadcast();
+  }catch(e){try{c.send({t:'err',msg:e.message})}catch(_){}}
+}
+function viewFor(pid){
+  const v=clone(S);delete v.deck;
+  const shown=v.phase==='showdown'&&v.results&&v.results.shown;
+  v.players.forEach(p=>{
+    if(p.id===pid)return;
+    if(shown&&!p.out&&!p.folded)return;
+    if(p.hole.length)p.hole=['?','?'];
+  });
+  return v;
+}
+function broadcast(){
+  for(const pid in conns){try{conns[pid].send({t:'state',s:viewFor(pid)});}catch(e){}}
+  render();
+}
+
+/* --- ゲスト --- */
+async function joinTable(c){
+  const n=needName();if(!n||connState==='connecting')return;
+  c=(c||'').trim().toUpperCase();if(!c){toast('テーブルコードを入力してください');return;}
+  try{await loadPeer();}catch(e){toast(e.message);return;}
+  const wasGuest=role==='guest';
+  closePeer();code=c;connState='connecting';render();
+  const p=new Peer();peer=p;let opened=false;
+  const fail=msg=>{if(peer!==p)return;toast(msg);closePeer();connState=wasGuest?'lost':'';render();};
+  const timer=setTimeout(()=>{if(!opened)fail('接続できませんでした。コードを確認して、もう一度試してください');},15000);
+  p.on('open',()=>{
+    const hc=p.connect(PREFIX+c,{reliable:true});hostConn=hc;
+    hc.on('open',()=>{opened=true;clearTimeout(timer);hc.send({t:'join',pid:myId,name:n});});
+    hc.on('data',d=>{
+      if(!d||hostConn!==hc)return;
+      if(d.t==='state'){S=d.s;role='guest';view='game';connState='ok';pending=false;ls.set('pk_last',c);render();}
+      else if(d.t==='err'){pending=false;toast(d.msg);render();}
+    });
+    hc.on('close',()=>{if(hostConn===hc){connState='lost';pending=false;render();}});
+  });
+  p.on('error',e=>{clearTimeout(timer);if(!opened)fail(peerErr(e));else toast(peerErr(e));});
+}
+
+/* --- 共通の操作 --- */
+function applyMsg(pid,d){
+  const t=d.t;
+  if(t==='act')act(S,pid,String(d.type),d.amt);
+  else if(t==='start'){if(pid!==S.hostId)throw new Error('ホストだけが開始できます');if(S.phase==='lobby')startHand(S);}
+  else if(t==='next'){if(S.phase==='showdown'&&S.handNo===d.h)startHand(S);}
+  else if(t==='rebuy'){const p=S.players.find(x=>x.id===pid);if(p&&p.stack<=0&&(S.phase==='showdown'||S.phase==='lobby'))p.stack=S.start;}
+  else if(t==='rebuyAll'){if(role!=='local')return;S.players.forEach(p=>{if(p.stack<=0)p.stack=S.start;});}
+  else if(t==='skip'){if(pid!==S.hostId)throw new Error('ホストだけが操作できます');const tp=S.players[S.turn];if(tp&&S.phase!=='showdown')act(S,tp.id,'fold');}
+  else if(t==='leave'){
+    if(S.phase!=='lobby'&&S.phase!=='showdown')throw new Error('ハンドの途中は席を外せません');
+    removePlayer(S,pid);
+    const c=conns[pid];if(c){delete conns[pid];setTimeout(()=>{try{c.close()}catch(e){}},400);}
+  }
+}
+function send(msg){
+  if(role==='guest'){
+    if(hostConn&&hostConn.open){pending=true;hostConn.send(msg);render();}
+    else toast('ホストに接続されていません');
+    return;
+  }
+  try{
+    const pid=role==='local'?(msg.t==='act'?S.players[S.turn].id:null):myId;
+    applyMsg(pid,msg);
+    if(role==='local'&&msg.t==='act')localReveal=false;
+  }catch(e){toast(e.message);}
+  if(role==='host')broadcast();else render();
+}
+function goHome(){
+  if(role==='host'&&Object.keys(conns).length&&!confirm('テーブルを閉じると、全員の対戦が終わります。閉じますか?'))return;
+  closePeer();role=null;S=null;view='home';connState='';pending=false;render();
+}
+function leaveSeat(){
+  if(role==='guest'){
+    if(S.phase!=='lobby'&&S.phase!=='showdown'){toast('ハンドの途中は席を外せません');return;}
+    send({t:'leave'});ls.del('pk_last');setTimeout(()=>{closePeer();role=null;S=null;view='home';connState='';render();},300);
+  } else goHome();
+}
+function startLocal(){
+  const names=localNames.map(x=>x.trim()).filter(Boolean);
+  if(names.length<2){toast('2人以上の名前を入力してください');return;}
+  closePeer();
+  const s=freshTable('LOCAL','local',blinds());
+  names.forEach((n,i)=>addPlayer(s,'p'+i,n.slice(0,12)));
+  startHand(s);S=s;role='local';view='game';localReveal=false;render();
+}
+function copyText(t,label){
+  const done=()=>toast(label+'をコピーしました');
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,()=>prompt('コピーしてください',t));
+  else prompt('コピーしてください',t);
+}
+function inviteURL(){if(!/^https?:/.test(location.protocol))return null;return location.origin+location.pathname+'?join='+code;}
+window.addEventListener('beforeunload',e=>{if(role==='host'&&Object.keys(conns).length){e.preventDefault();e.returnValue='';}});
+
+/* ===== 描画 ===== */
+function cardHTML(c,size,anim){
+  if(c==='back'||c==='?')return `<div class="card back ${size}"></div>`;
+  if(!c)return `<div class="card slot ${size}"></div>`;
+  const red=c[1]==='h'||c[1]==='d';
+  return `<div class="card ${size} ${red?'red':''} ${anim?'deal':''}" role="img" aria-label="${cardText(c)}"><span>${c[0]==='T'?'10':c[0]}</span><span class="s">${SUITS[c[1]]}</span></div>`;
+}
+function render(){
+  const app=document.getElementById('app');
+  document.getElementById('overlay').innerHTML='';
+  if(view==='home')app.innerHTML=homeHTML();
+  else if(view==='localSetup')app.innerHTML=localSetupHTML();
+  else if(S&&S.phase==='lobby')app.innerHTML=lobbyHTML();
+  else if(S)app.innerHTML=tableHTML();
+}
+function cfgHTML(){
+  return `<div class="row">
+    <div><label for="cstart">持ちチップ</label><select id="cstart" onchange="cfg.start=this.value">
+      ${[500,1000,2000,5000].map(v=>`<option ${+cfg.start===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div><label for="cblind">ブラインド</label><select id="cblind" onchange="cfg.blind=this.value">
+      ${['5/10','10/20','25/50','50/100'].map(v=>`<option ${cfg.blind===v?'selected':''}>${v}</option>`).join('')}</select></div></div>`;
+}
+function homeHTML(){
+  const last=ls.get('pk_last');const busy=connState==='connecting';
+  const fan=['As','Ks','Qh','Jd','Ts'].map((c,i)=>`<div style="transform:rotate(${(i-2)*7}deg) translateY(${Math.abs(i-2)*4}px);margin-left:${i?-18:0}px">${cardHTML(c,'lg')}</div>`).join('');
+  return `<div class="hero"><div class="fan" aria-hidden="true">${fan}</div>
+    <h1>ホールデム・テーブル</h1>
+    <p>2〜8人で遊べるテキサスホールデム。アカウント登録なしで、コードを共有すればそれぞれの端末から参加できます。</p></div>
+  <section class="panel guide" aria-labelledby="gh">
+    <h2 id="gh">みんなで遊ぶ方法</h2>
+    <p class="muted" style="margin:0">アカウント登録は不要です。遊び方は2通りあります。</p>
+
+    <h3>① それぞれの端末で遊ぶ</h3>
+    <p style="margin:0">まず、誰か1人が「ホスト」になってテーブルを作ります。ほかの人はそのテーブルに参加します。</p>
+
+    <h3><span class="role">ホスト</span>テーブルを作る人(1人だけ)</h3>
+    <ol>
+      <li>下の「あなたの名前」に名前を入れます。</li>
+      <li>必要なら「テーブルの設定」で、最初のチップの数とブラインド(強制ベットの額)を選びます。迷ったらそのままでOKです。</li>
+      <li><kbd>テーブルを作る</kbd>を押すと、<strong>5文字のコード</strong>(例: K7QXM)が表示されます。</li>
+      <li>コードをLINEやDiscordでみんなに送ります。<kbd>コードをコピー</kbd>ボタンが使えます。</li>
+      <li>参加者の一覧に全員の名前が並んだら、<kbd>ゲームを始める</kbd>を押します。</li>
+    </ol>
+    <div class="note">ゲームはホストの端末の中で進みます。<strong>ホストが画面を閉じたり、スマホがスリープしたりすると全員の対戦が止まります。</strong>遊んでいる間はこの画面を開いたままにして、できれば充電しながら遊んでください。</div>
+
+    <h3><span class="role g">参加者</span>テーブルに入る人</h3>
+    <ol>
+      <li>このページを自分の端末で開きます(ホストから送られたファイルやURL)。</li>
+      <li>「あなたの名前」に名前を入れます。</li>
+      <li>ホストから届いた5文字のコードを入れて、<kbd>参加する</kbd>を押します。招待リンクから開いた場合は、コードが最初から入っています。</li>
+      <li>「ホストがゲームを始めるのを待っています」と出たら準備完了です。</li>
+    </ol>
+    <div class="note">自分の手札は自分の画面にだけ表示されます。ほかの人の手札は、最後の勝負(ショーダウン)まで裏向きのままです。</div>
+
+    <h3>② 1台を回して遊ぶ</h3>
+    <p style="margin:0">スマホやPCが1台しかないときは、下の「1台で回して遊ぶ」から全員の名前を入れて始めます。自分の番になったら端末を受け取り、<kbd>カードを見る</kbd>を押して操作します。操作が終わると画面が隠れるので、次の人に渡してください。</p>
+
+    <h3>うまくいかないとき</h3>
+    <dl>
+      <dt>「テーブルが見つかりません」と出る</dt>
+      <dd>コードが合っているか確認してください。ホストの画面が閉じていたりスリープしていたりすると見つかりません。</dd>
+      <dt>ゲーム中に「ホストとの接続が切れました」と出る</dt>
+      <dd><kbd>再接続</kbd>を押すと同じ席に戻れます。チップも手札もそのままです。</dd>
+      <dt>何度やってもつながらない</dt>
+      <dd>学校や会社のWi-Fiでは、この種類の通信が止められていることがあります。スマホのモバイル回線に切り替えて試してください。</dd>
+      <dt>途中で抜けたい</dt>
+      <dd>ハンドが終わったタイミングで<kbd>席を外す</kbd>を押してください。ホストがテーブルを閉じると全員が終了します。</dd>
+      <dt>番の人が反応しない</dt>
+      <dd>ホストの画面に出る「応答がない〇〇さんをフォールドさせる」ボタンで先に進められます。</dd>
+    </dl>
+  </section>
+  <div class="panel stack-gap">
+    <h2 style="margin:0;font-size:20px">テーブルを作る・参加する</h2>
+    <div><label for="nm">あなたの名前</label><input id="nm" maxlength="12" value="${esc(myName)}" oninput="myName=this.value" placeholder="例: たけし"></div>
+    <details><summary class="muted" style="font-weight:500">テーブルの設定(ホストのみ)</summary><div style="margin-top:10px">${cfgHTML()}</div></details>
+    <button class="brass" style="width:100%" onclick="createTable()" ${busy?'disabled':''}>${busy?'接続しています…':'テーブルを作る'}</button>
+    <div class="row"><input id="jc" maxlength="5" value="${esc(joinCode)}" oninput="joinCode=this.value" placeholder="テーブルコード" aria-label="テーブルコード" style="text-transform:uppercase;letter-spacing:.15em"><button onclick="joinTable(joinCode)" style="flex:0 0 auto" ${busy?'disabled':''}>参加する</button></div>
+    ${last?`<button class="ghost small" onclick="joinTable('${esc(last)}')" ${busy?'disabled':''}>前回のテーブル ${esc(last)} に戻る</button>`:''}
+    <p class="muted" style="margin:0">テーブルはホストの端末で動きます。遊んでいる間、ホストはこの画面を開いたままにしてください。</p>
+  </div>
+  <div class="panel stack-gap">
+    <h2 style="margin:0;font-size:20px">1台で回して遊ぶ</h2>
+    <p class="muted" style="margin:0">自分の番が来たら端末を受け取り、他の人に見えないようにカードを確認します。</p>
+    <button class="ghost" style="width:100%" onclick="view='localSetup';render()">メンバーを決める</button>
+  </div>
+  <details class="panel"><summary>遊び方と役の強さ</summary>
+    <p class="muted">手札2枚と場のカード5枚から、いちばん強い5枚の組み合わせで勝負します。自分の番ではフォールド(降りる)、チェック/コール(合わせる)、ベット/レイズ(上乗せ)を選びます。最後まで残った人か、ショーダウンで最も強い役の人がポットを獲得します。</p>
+    <p class="muted" style="margin-bottom:0">強い順:</p>
+    <ol class="ranks">${HAND_NAMES.slice().reverse().map(n=>`<li>${n}</li>`).join('')}</ol>
+  </details>`;
+}
+function localSetupHTML(){
+  return `<div class="topbar"><button class="ghost small" onclick="view='home';render()">戻る</button></div>
+  <div class="panel stack-gap"><h2 style="margin:0;font-size:22px">参加メンバー</h2>
+    ${localNames.map((n,i)=>`<div class="row"><input maxlength="12" value="${esc(n)}" placeholder="プレイヤー${i+1}" aria-label="プレイヤー${i+1}の名前" oninput="localNames[${i}]=this.value">
+      ${localNames.length>2?`<button class="ghost small" style="flex:0 0 auto" onclick="localNames.splice(${i},1);render()">削除</button>`:''}</div>`).join('')}
+    ${localNames.length<8?`<button class="ghost small" onclick="localNames.push('');render()">メンバーを追加</button>`:''}
+    ${cfgHTML()}
+    <button class="brass" style="width:100%" onclick="startLocal()">ゲームを始める</button></div>`;
+}
+function lostBanner(){
+  if(role!=='guest'||connState==='ok')return '';
+  const busy=connState==='connecting';
+  return `<div class="banner"><span>ホストとの接続が切れました</span><button class="small brass" onclick="joinTable(code)" ${busy?'disabled':''}>${busy?'接続中…':'再接続'}</button></div>`;
+}
+function onlineTag(p){return role!=='local'&&p.online===false?'<span class="tag off">オフライン</span>':'';}
+function lobbyHTML(){
+  const host=role==='host';const url=inviteURL();
+  return `<div class="topbar"><button class="ghost small" onclick="${host?'goHome()':'leaveSeat()'}">${host?'テーブルを閉じる':'席を外す'}</button></div>
+  ${lostBanner()}
+  <div class="panel" style="text-align:center">
+    <p class="muted" style="margin:0">友だちにこのコードを伝えてください</p>
+    <div class="bigcode">${esc(S.code)}</div>
+    <div class="row" style="justify-content:center;margin-top:8px">
+      <button class="ghost small" style="flex:0 0 auto" onclick="copyText('${esc(S.code)}','コード')">コードをコピー</button>
+      ${url?`<button class="ghost small" style="flex:0 0 auto" onclick="copyText('${esc(url)}','招待リンク')">招待リンクをコピー</button>`:''}</div>
+    <p class="muted" style="margin:8px 0 0">友だちは同じページを開き、名前とコードを入れて「参加する」を押します</p></div>
+  <div class="panel"><div class="row"><strong>参加者 ${S.players.length}/8</strong>
+    <span class="muted" style="text-align:right">チップ ${S.start}、ブラインド ${S.sb}/${S.bb}</span></div>
+    <ul class="plist">${S.players.map(p=>`<li><span>${esc(p.name)}${p.id===myId?'(あなた)':''} ${onlineTag(p)}</span>${p.id===S.hostId?'<span class="tag">ホスト</span>':''}</li>`).join('')}</ul></div>
+  ${host?`<button class="brass" style="width:100%" onclick="send({t:'start'})" ${S.players.length<2?'disabled':''}>${S.players.length<2?'あと1人集まると始められます':'ゲームを始める'}</button>`
+   :`<p class="muted" style="text-align:center">ホストがゲームを始めるのを待っています…</p>`}`;
+}
+function viewer(){
+  if(role==='local')return S.phase!=='showdown'&&localReveal?S.players[S.turn]:null;
+  return S.players.find(p=>p.id===myId)||null;
+}
+function statusHTML(p){
+  if(S.phase==='showdown'&&S.results){
+    const w=S.results.winners.find(x=>x.id===p.id);const h=S.results.hands[p.id];
+    if(w)return `<div class="status win">+${w.amount} 獲得${h?'、'+h.name:''}</div>`;
+    if(h)return `<div class="status">${h.name}</div>`;
+  }
+  if(p.out)return `<div class="status">${p.stack<=0?'チップなし':'次のハンドから参加'}</div>`;
+  return `<div class="status">${esc(p.last||'')}</div>`;
+}
+function tableHTML(){
+  const me=viewer();
+  const showAll=S.phase==='showdown'&&S.results&&S.results.shown;
+  const seats=S.players.map((p,i)=>{
+    if(role!=='local'&&p.id===myId)return '';
+    let cards='';
+    if(!p.out&&p.hole.length&&!p.folded)cards=(showAll?p.hole.map(c=>cardHTML(c,'sm')):[cardHTML('back','xs'),cardHTML('back','xs')]).join('');
+    return `<div class="seat ${i===S.turn?'turn':''} ${p.folded&&!p.out?'folded':''} ${p.out?'out':''}">
+      <div class="top"><span class="nm">${esc(p.name)}</span>${i===S.dealer?'<span class="dbtn" title="ディーラー">D</span>':''}${onlineTag(p)}</div>
+      <div class="cards">${cards}</div>
+      <div class="meta"><span class="chip">${p.stack}</span>${p.bet?`<span class="muted">ベット ${p.bet}</span>`:''}</div>
+      ${statusHTML(p)}</div>`;
+  }).join('');
+  const board=[0,1,2,3,4].map(i=>cardHTML(S.board[i],'md',true)).join('');
+  const turnP=S.players[S.turn];
+  const street=S.phase==='showdown'?'このハンドの結果':`${STREETS[S.phase]}${turnP?`、${esc(turnP.name)}さんの番`:''}`;
+  let bottom='';
+  if(me)bottom=meHTML(me);
+  else if(role!=='local')bottom=`<div class="me"><p class="muted" style="margin:0">観戦中です。</p></div>`;
+  if(S.phase==='showdown')bottom+=resultsHTML(me);
+  const skip=role==='host'&&turnP&&turnP.id!==myId&&S.phase!=='showdown'
+    ?`<button class="ghost small" onclick="if(confirm('${esc(turnP.name)}さんをフォールドさせますか?'))send({t:'skip'})">応答がない${esc(turnP.name)}さんをフォールドさせる</button>`:'';
+  if(role==='local'&&S.phase!=='showdown'&&!localReveal&&turnP){
+    document.getElementById('overlay').innerHTML=`<div class="cover"><div>
+      <p style="opacity:.75;margin:0">第${S.handNo}ハンド、${STREETS[S.phase]}</p>
+      <h2 class="mincho">${esc(turnP.name)}さんの番です</h2>
+      <p style="opacity:.75">ほかの人は画面を見ないでください</p>
+      <button class="brass" onclick="localReveal=true;render()">カードを見る</button></div></div>`;
+  }
+  const exitBtn=role==='local'?`<button class="ghost small" onclick="if(confirm('ゲームを終了しますか?'))goHome()">終了</button>`
+    :role==='host'?`<button class="ghost small" onclick="goHome()">テーブルを閉じる</button>`
+    :`<button class="ghost small" onclick="leaveSeat()">席を外す</button>`;
+  return `<div class="topbar">
+    <span class="code">${role==='local'?'第'+S.handNo+'ハンド':esc(S.code)}</span>
+    <span class="row" style="flex:0 0 auto">${role!=='local'?`<span class="muted">第${S.handNo}ハンド</span>`:''}${exitBtn}</span></div>
+  ${lostBanner()}
+  <div class="seats">${seats}</div>
+  <div class="felt"><div class="street">${street}</div><div class="board">${board}</div>
+    <div class="pot"><small>ポット</small>${potTotal(S)}</div></div>
+  ${bottom}${skip}
+  <div class="log" aria-label="ログ">${S.log.slice().reverse().map(esc).join('<br>')}</div>`;
+}
+function meHTML(me){
+  const idx=S.players.indexOf(me);
+  const myTurn=idx===S.turn&&S.phase!=='showdown';
+  const dis=pending||(role==='guest'&&connState!=='ok')?'disabled':'';
+  let hand='';
+  if(!me.out&&me.hole.length&&me.hole[0]!=='?'){
+    const bh=S.board.length>=3?bestHand([...me.hole,...S.board]):null;
+    hand=bh?bh.name:(me.hole[0][0]===me.hole[1][0]?'ポケットペア':'');
+  }
+  const cards=!me.out&&me.hole.length?me.hole.map(c=>cardHTML(c,'lg')).join(''):'';
+  let actions='';
+  if(myTurn){
+    const toCall=S.currentBet-me.bet;const maxTo=me.bet+me.stack;
+    const minTo=Math.min(S.currentBet+S.minRaise,maxTo);
+    const others=S.players.some(q=>q!==me&&canAct(q));
+    const canRaise=maxTo>S.currentBet&&toCall<me.stack&&others;
+    const key=S.handNo+'-'+S.phase+'-'+S.currentBet+'-'+me.id;
+    if(raiseKey!==key){raiseKey=key;raiseVal=minTo;}
+    raiseVal=Math.max(minTo,Math.min(raiseVal,maxTo));
+    const pot=potTotal(S);
+    const pre=f=>Math.max(minTo,Math.min(maxTo,S.currentBet+Math.round((pot+toCall)*f)));
+    const verb=S.currentBet===0?'ベット':'レイズ';
+    actions=`<div class="actions">
+      <button class="fold" onclick="doAct('fold')" ${dis}>フォールド</button>
+      ${toCall>0?`<button onclick="doAct('call')" ${dis}>${toCall>=me.stack?'オールイン '+maxTo:'コール '+toCall}</button>`
+        :`<button onclick="doAct('check')" ${dis}>チェック</button>`}
+      ${canRaise?`<div class="raisebox">
+        <div class="row"><span class="muted">${verb}額(合計)</span><span class="raiseval" id="rv" style="text-align:right">${raiseVal}</span></div>
+        <input type="range" min="${minTo}" max="${maxTo}" step="${S.sb}" value="${raiseVal}" aria-label="${verb}額" oninput="setRaise(this.value)">
+        <div class="presets">
+          <button class="ghost small" onclick="setRaise(${minTo},1)">最小</button>
+          <button class="ghost small" onclick="setRaise(${pre(.5)},1)">½ポット</button>
+          <button class="ghost small" onclick="setRaise(${pre(1)},1)">ポット</button>
+          <button class="ghost small" onclick="setRaise(${maxTo},1)">全部</button></div>
+        <button class="brass" style="width:100%" id="rbtn" onclick="doAct('raise')" ${dis}>${raiseVal>=maxTo?'オールイン':verb} ${raiseVal}</button></div>`:''}
+    </div>`;
+  } else if(S.phase!=='showdown'&&!me.out&&!me.folded){
+    const t=S.players[S.turn];
+    actions=`<p class="waiting">${me.allIn?'オールイン中です。':''}${t?esc(t.name)+'さんの番です':''}</p>`;
+  }
+  return `<div class="me ${myTurn?'turn':''}">
+    <div class="head"><div class="cards">${cards||'<span class="muted">このハンドには参加していません</span>'}</div>
+      <div class="info"><div class="nm">${esc(me.name)}${S.dealer===idx?' <span class="dbtn">D</span>':''}</div>
+        <div class="chip">${me.stack}</div>
+        ${me.bet?`<div class="muted">ベット中 ${me.bet}</div>`:''}
+        ${me.folded&&!me.out?'<div class="muted">フォールドしました</div>':''}
+        ${hand&&!me.folded?`<div class="handname">${hand}</div>`:''}</div></div>
+    ${actions}</div>`;
+}
+function resultsHTML(me){
+  const r=S.results;if(!r)return '';
+  const name=id=>{const p=S.players.find(x=>x.id===id);return p?esc(p.name):'?';};
+  const lines=r.winners.map(w=>`<div class="line"><strong>${name(w.id)}</strong>さんが ${w.amount} を獲得${r.hands[w.id]?`(${r.hands[w.id].name})`:''}
+    ${r.hands[w.id]?`<div class="cards" style="margin-top:6px">${r.hands[w.id].cards.map(c=>cardHTML(c,'xs')).join('')}</div>`:''}</div>`).join('');
+  const dis=pending||(role==='guest'&&connState!=='ok')?'disabled':'';
+  const rebuy=role!=='local'&&me&&me.stack<=0?`<button class="ghost" style="width:100%" onclick="send({t:'rebuy'})" ${dis}>チップを補充する(${S.start})</button>`:'';
+  const localRebuy=role==='local'&&S.players.some(p=>p.stack<=0)?`<button class="ghost" style="width:100%" onclick="send({t:'rebuyAll'})">チップ切れの人に補充する</button>`:'';
+  const canNext=role==='local'||!!me;
+  return `<div class="panel results stack-gap">${lines}
+    ${rebuy}${localRebuy}
+    ${canNext?`<button class="brass" style="width:100%" onclick="send({t:'next',h:S.handNo})" ${dis}>次のハンドへ</button>`:''}</div>`;
+}
+function setRaise(v,rerender){
+  raiseVal=+v;
+  if(rerender){render();return;}
+  const me=viewer();if(!me)return;
+  const maxTo=me.bet+me.stack;
+  const rv=document.getElementById('rv');if(rv)rv.textContent=raiseVal;
+  const b=document.getElementById('rbtn');if(b)b.textContent=(raiseVal>=maxTo?'オールイン':(S.currentBet===0?'ベット':'レイズ'))+' '+raiseVal;
+}
+function doAct(type){if(!viewer())return;send({t:'act',type,amt:raiseVal});}
+render();
+</script>
+</body>
+</html>
